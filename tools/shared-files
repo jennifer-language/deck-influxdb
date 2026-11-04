@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: LGPL-3.0-only
+# SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
+#
+# The shared CI layer: what the template's tools/sync-deck.sh writes into every
+# deck, one entry per line.
+#
+#   shared   <path>              copied verbatim and recorded in tools/shared.lock;
+#                                tools/check-shared.sh fails CI if a deck edits it
+#   optional <path>              like shared while the deck carries it; added on a
+#                                deck's first sync, and a deck opts out by deleting
+#                                it - an edited copy still fails CI, a missing one not
+#   seed     <path> [sha256...]  the deck's own file: written only when the deck has
+#                                none, or when its copy is one of the listed
+#                                unmodified versions an older template shipped
+#   merge    <path>              line by line: lines the deck lacks are appended
+#   import   <path> <line>       the deck's own file, which must contain <line>;
+#                                seeded when missing, the line inserted otherwise.
+#                                tools/check-shared.sh fails CI when the file exists
+#                                without it. A line `@<file>` only applies while the
+#                                deck carries <file>
+#   retired  <path>              shipped by an older template, removed on sync
+#
+# To change anything listed as shared, change it in the template and sync.
+
+shared   .github/workflows/test.yml
+shared   .github/workflows/release.yml
+shared   .github/workflows/docs.yml
+shared   .github/actions/setup-jennifer/action.yml
+shared   .github/actions/install-jennifer/action.yml
+shared   tools/deck-lib.sh
+shared   tools/shared-files
+shared   tools/check-shared.sh
+shared   tools/check-all.sh
+shared   tools/check-headers.sh
+shared   tools/check-overlays.sh
+shared   tools/check-src.sh
+shared   tools/check-coverage.sh
+shared   tools/check-docs.sh
+shared   tools/check-identity.sh
+shared   tools/check-examples-shared.sh
+shared   tools/vendor-deps.sh
+shared   tools/version.sh
+shared   tools/inject-version.sh
+shared   tools/pack.sh
+optional AGENTS.md
+
+# The old template's tools/check-examples.sh was the full runner, now
+# check-examples-shared.sh; an unmodified copy of it is replaced by the wrapper.
+seed     tools/check-examples.sh 081b549223c4b10b3b40d64514251b11d547fb3319a2158ca895e789e5afaca8
+seed     .editorconfig
+seed     .github/CODEOWNERS
+merge    .gitignore
+# .gitattributes was a merge entry, which only appends lines; an unmodified
+# copy of that older version is replaced, a deck's own lines are kept.
+seed     .gitattributes 6a1c162e3552586766ca0722cb703a76476c11ebaeb4f9cd7d11a9abf1a67bc2
+import   CLAUDE.md @AGENTS.md
+
+retired  tools/check-cheatsheet.sh

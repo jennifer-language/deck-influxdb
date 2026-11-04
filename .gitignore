@@ -1,0 +1,14 @@
+# the built book
+site/
+# release archives from tools/pack.sh
+dist/
+# dependencies fetched by tools/vendor-deps.sh
+vendor/
+# an interpreter built from source by .github/actions/install-jennifer
+.jennifer-src/
+# example fixtures a tools/check-examples.sh override builds
+.ci-fixtures/
+# the leftover of a crashed `jennifer fmt -w`; tools/check-src.sh refuses it
+.jfmt-*.tmp
+# scratch from tools/check-docs.sh
+.docblocks-*/

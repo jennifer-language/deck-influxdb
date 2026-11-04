@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: LGPL-3.0-only
+# SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
+#
+# Build the book from docs/ with Jennifer's Grimoire and publish it to GitHub
+# Pages, through Grimoire's shared workflow:
+# https://grimoire.jennifer-lang.dev/github-pages.html
+#
+# The site root is the book as it stood at the highest release tag (plain
+# MAJOR.MINOR.PATCH, the tags release.yml builds), so a reader of the latest
+# release reads that release's documentation. Until the first release, main is
+# published at the root. Unreleased documentation is not published (no `/dev/`;
+# `dev` defaults to false). A pull request builds the book, so a broken outline
+# fails before it is merged, but never publishes.
+#
+# `uses` and `image` are pinned to the same Grimoire release; move both
+# together.
+#
+# One-time manual steps: Settings -> Pages -> Source -> GitHub Actions, and
+# Settings -> Environments -> github-pages -> a deployment tag rule
+# `[0-9]*.[0-9]*.[0-9]*` (without it a tag-triggered deploy is refused).
+
+name: docs
+
+on:
+  push:
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+    # Before the first release every merge refreshes the root; afterwards a
+    # push to main only republishes the same release.
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pages:
+    # A called workflow can narrow what it is given but never widen it, so the
+    # Pages deployment permissions are granted here.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: jennifer-language/grimoire/.github/workflows/docs-pages.yml@0.4.0
+    with:
+      image: ghcr.io/jennifer-language/grimoire:0.4.0

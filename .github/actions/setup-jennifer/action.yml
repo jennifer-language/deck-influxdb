@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: LGPL-3.0-only
+# SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
+#
+# Put a `jennifer` on the runner's PATH that runs the interpreter image matching
+# the deck's floor.
+#
+# Which image is a property of the deck, not of the workflow: a deck pinned to
+# a released series is tested on that release, because a dev build would bypass
+# the floor it declares. tools/deck-lib.sh decides (deck_image). Every job that
+# runs the deck uses this, so the choice is made in exactly one place.
+#
+# The shim mounts only the workspace, at /work. A program run through it sees
+# the checkout and nothing else, so fixtures belong inside the repository and
+# paths handed to a program must be relative.
+#
+# Needs the repository checked out first, since it reads the manifest.
+
+name: Set up Jennifer
+description: Pull the interpreter image for the deck's floor and install a `jennifer` shim
+
+outputs:
+  image:
+    description: The interpreter image the shim runs.
+    value: ${{ steps.resolve.outputs.image }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the interpreter image
+      id: resolve
+      shell: bash
+      run: |
+        set -euo pipefail
+        source tools/deck-lib.sh && deck_load
+        image="$(deck_image)"
+        echo "JENNIFER_IMAGE=${image}" >> "$GITHUB_ENV"
+        echo "image=${image}" >> "$GITHUB_OUTPUT"
+        echo "floor ${DECK_FLOOR} -> ${image}"
+
+    - name: Pull the interpreter image
+      shell: bash
+      run: |
+        docker pull "$JENNIFER_IMAGE"
+        docker run --rm "$JENNIFER_IMAGE" version
+
+    # --user keeps anything written into the workspace owned by the runner.
+    - name: Install a `jennifer` shim that runs the image
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$HOME/.local/bin"
+        cat > "$HOME/.local/bin/jennifer" <<'SHIM'
+        #!/usr/bin/env bash
+        exec docker run --rm --user "$(id -u):$(id -g)" \
+          --volume "${GITHUB_WORKSPACE}:/work" --workdir /work \
+          --entrypoint jennifer "${JENNIFER_IMAGE}" "$@"
+        SHIM
+        chmod +x "$HOME/.local/bin/jennifer"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"

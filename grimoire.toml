@@ -1,0 +1,33 @@
+# Grimoire book configuration for the @jennifer/influxdb documentation.
+
+[book]
+title = "@jennifer/influxdb"
+description = "An InfluxDB client: line-protocol writes and InfluxQL or Flux queries for InfluxDB 1.x, 2.x and 3.x"
+language = "en"
+src = "docs"
+
+[build]
+out = "site"
+clean = true
+jobs = 0
+
+[html]
+theme = "nordic"
+mode = "auto"
+navPosition = "left"
+tocPosition = "right"
+tocDepth = 3
+sectionNumbers = true
+titleUrl = "https://jennifer-language.github.io/deck-influxdb/"
+repoUrl = "https://github.com/jennifer-language/deck-influxdb"
+repoLabel = "Source"
+editUrl = "https://github.com/jennifer-language/deck-influxdb/edit/main/docs/{path}"
+
+[highlight]
+enabled = true
+
+[search]
+enabled = true
+
+[pdf]
+enabled = false

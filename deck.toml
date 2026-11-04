@@ -1,0 +1,19 @@
+[package]
+name = "@jennifer/influxdb"
+version = "0.1.0"
+description = "An InfluxDB client: line-protocol writes for 1.x, 2.x and 3.x, InfluxQL and Flux queries"
+license = "LGPL-3.0-only"
+authors = ["mplx <mplx@jennifer-lang.dev>"]
+# The deck talks to an InfluxDB server over HTTP, so it opens sockets. No
+# `exec`, no `sql`.
+capabilities = ["net"]
+keywords = ["influxdb", "metrics", "time-series", "line-protocol", "influxql", "flux", "monitoring"]
+
+[package.urls]
+deck = "https://raw.githubusercontent.com/jennifer-language/deck-influxdb/main/deck.toml"
+homepage = "https://github.com/jennifer-language/deck-influxdb"
+manual = "https://jennifer-language.github.io/deck-influxdb/"
+
+# Only the default binary: `jennifer-tiny` has no `net` capability.
+[engines]
+jennifer = ">=0.25.0"

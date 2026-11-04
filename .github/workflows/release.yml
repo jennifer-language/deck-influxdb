@@ -1,0 +1,140 @@
+# SPDX-License-Identifier: LGPL-3.0-only
+# SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
+#
+# Cut a GitHub release when a stable version tag is pushed.
+#
+# A deck has nothing to compile and no per-platform artifact: it is Jennifer
+# source, consumed by vendoring src/ into a project. So the release is the tag
+# plus the archive jvc would fetch, and the gate in front of it is test.yml
+# itself, called rather than copied - a red suite must not become a tag.
+#
+# Release tags are stable semver only, without a prefix: `0.2.0`, never
+# `v0.2.0`. Neither a `v` tag nor a prerelease tag (`0.2.0-rc1`) is a release:
+# the trigger does not match them, and the gate below refuses one that slips
+# through or a manual run from a branch.
+
+name: release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      # The trigger glob is loose; this is the gate. workflow_dispatch from a
+      # branch lands here too and fails, which is the intent.
+      - name: Tag must be a stable release
+        run: |
+          set -euo pipefail
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::${GITHUB_REF_NAME} is not a stable release tag (N.N.N, no v prefix)"
+            exit 1
+          fi
+
+      # The manifest version is what jvc resolves against, read from the
+      # default branch, so a tag that disagrees with it would publish the deck
+      # under a number nothing else knows about.
+      - name: Tag must match the manifest
+        run: |
+          set -euo pipefail
+          source tools/deck-lib.sh && deck_load
+          if [[ "${GITHUB_REF_NAME}" != "$DECK_VERSION" ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match ${DECK_MANIFEST} version ${DECK_VERSION}"
+            echo "::error::bump the manifest and commit it before tagging"
+            exit 1
+          fi
+          echo "${DECK_MANIFEST} declares ${DECK_VERSION}, matching the tag"
+
+      - name: The deck must have been initialised
+        run: tools/check-identity.sh --release
+
+  test:
+    name: The gate
+    needs: tag
+    uses: ./.github/workflows/test.yml
+
+  release:
+    name: Create the release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          # Tags for the version, and history for the notes.
+          fetch-depth: 0
+
+      # A deck with a generated version file ships it stamped with the tag.
+      - name: Build the release archive
+        id: pack
+        run: |
+          set -euo pipefail
+          tools/inject-version.sh
+          source tools/deck-lib.sh && deck_load
+          tools/pack.sh dist
+          {
+            echo "name=${DECK_NAME}"
+            echo "slug=${DECK_SLUG}"
+            echo "scope=${DECK_SCOPE}"
+            echo "version=${DECK_VERSION}"
+            echo "root=${DECK_SCOPE}-${DECK_SLUG}-${DECK_VERSION}"
+            echo "manual=$(deck_field package.urls.manual)"
+            echo "description=$(deck_field package.description)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        env:
+          SLUG: ${{ steps.pack.outputs.slug }}
+          SCOPE: ${{ steps.pack.outputs.scope }}
+          ROOT: ${{ steps.pack.outputs.root }}
+          MANUAL: ${{ steps.pack.outputs.manual }}
+          DESCRIPTION: ${{ steps.pack.outputs.description }}
+          NAME: ${{ steps.pack.outputs.name }}
+        run: |
+          set -euo pipefail
+          {
+            echo "${DESCRIPTION}"
+            echo
+            echo "**Documentation:** ${MANUAL}"
+            echo
+            echo "**Install** - \`jvc add ${NAME}\`, or vendor the \`src/\` subtree by hand:"
+            echo
+            echo '```sh'
+            echo "mkdir -p vendor/${SCOPE}/${SLUG}"
+            echo "tar -xzf ${ROOT}.tar.gz -C vendor/${SCOPE}/${SLUG} \\"
+            echo "    --strip-components=2 ${ROOT}/src"
+            echo '```'
+            echo
+            echo "## Changes"
+            echo
+          } > notes.md
+          previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [[ -n "$previous" ]]; then
+            git log --no-merges --pretty='- %s' "${previous}..${GITHUB_REF_NAME}" >> notes.md
+          else
+            echo "- first release" >> notes.md
+          fi
+          cat notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${{ steps.pack.outputs.slug }} ${{ steps.pack.outputs.version }}" \
+            --notes-file notes.md \
+            dist/*.tar.gz dist/*.tar.gz.sha256 dist/*.tar.gz.checksum
