@@ -64,9 +64,13 @@ jobs:
     needs: tag
     uses: ./.github/workflows/test.yml
 
+  # Publishing targets GitHub (releases, Pages). The repositories are also on
+  # the project's Forgejo, whose runner executes these workflows too: there the
+  # tag is still checked and the gate still runs, but nothing is published.
   release:
     name: Create the release
     needs: test
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -138,3 +142,24 @@ jobs:
             --title "${{ steps.pack.outputs.slug }} ${{ steps.pack.outputs.version }}" \
             --notes-file notes.md \
             dist/*.tar.gz dist/*.tar.gz.sha256 dist/*.tar.gz.checksum
+
+  # Publish the book once the release exists: docs.yml on the default branch
+  # builds the highest release tag, this one. One path for every release,
+  # whatever order main and the tag were pushed in. (forensicgenetics 0.4.0,
+  # 2026-11-06: two tag-triggered deploys reported success and the site kept
+  # the previous build; a default-branch run replaced it. Cause unknown.)
+  # workflow_dispatch is one of the two events the GITHUB_TOKEN may start
+  # another workflow with.
+  docs:
+    name: Publish the documentation
+    needs: release
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Run docs.yml on the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: gh workflow run docs.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"
