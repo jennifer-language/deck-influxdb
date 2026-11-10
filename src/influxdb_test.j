@@ -214,7 +214,7 @@ func fakeInflux(srv as httpd.Server) {
     for (def i in 0..2) {
         def req as httpd.Request init httpd.accept($srv);
         if (httpd.path($req) == "/write") {
-            def body as string init convert.stringFromBytes(httpd.body($req), "utf-8");
+            def body as string init convert.stringFromBytes("utf-8", httpd.body($req));
             if (httpd.method($req) == "POST" and
                 httpd.header($req, "Authorization") == $wantAuth and
                 httpd.query($req, "db") == "metrics" and httpd.query($req, "precision") == "ns" and
@@ -224,7 +224,7 @@ func fakeInflux(srv as httpd.Server) {
                 httpd.respond($req, 400, '{"error":"bad write request"}');
             }
         } elseif (httpd.path($req) == "/query" and
-            uri.parseQuery(convert.stringFromBytes(httpd.body($req), "utf-8"))["q"] ==
+            uri.parseQuery(convert.stringFromBytes("utf-8", httpd.body($req)))["q"] ==
             "SELECT value FROM cpu") {
             httpd.setHeader($req, "Content-Type", "application/json");
             httpd.respond(
@@ -267,7 +267,7 @@ func fakeFlux(srv as httpd.Server) {
     def seen as list of string init [];
     for (def i in 0..2) {
         def req as httpd.Request init httpd.accept($srv);
-        def body as string init convert.stringFromBytes(httpd.body($req), "utf-8");
+        def body as string init convert.stringFromBytes("utf-8", httpd.body($req));
         $seen[] = httpd.method($req) + " " + httpd.path($req) + " org=" + httpd.query($req, "org") +
             " " +
             httpd.header($req, "Content-Type") + " " + $body;

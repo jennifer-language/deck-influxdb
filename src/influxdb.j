@@ -433,8 +433,8 @@ func authHeaders(c as Client) {
             if (len($c.user) > 0) {
                 def creds as string init $c.user + ":" + $c.password;
                 def enc as string init encoding.toText(
-                    convert.bytesFromString($creds, "utf-8"),
-                    "base64");
+                    "base64",
+                    convert.bytesFromString("utf-8", $creds));
                 $h["Authorization"] = "Basic " + $enc;
             }
         }
