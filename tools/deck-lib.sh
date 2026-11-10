@@ -120,6 +120,34 @@ if value is not None:
 PY
 }
 
+# --- the interpreter range -------------------------------------------------
+#
+# `engines.jennifer` (and `engines.jennifer-tiny`) take exactly two forms, the
+# two the `# pragma-jennifer-version` line accepts: a floor `>=X.Y.Z`, or a
+# floor and an exclusive upper bound `>=X.Y.Z <A.B.C`, one space between, the
+# bound above the floor. No caret, tilde, `||` or prerelease. An empty value
+# passes here; whoever needs one says so.
+
+# deck_check_range <field> <value>
+deck_check_range() {
+    local field="$1" range="$2" n='(0|[1-9][0-9]*)'
+    [[ -z "$range" ]] && return 0
+    if [[ ! "$range" =~ ^\>=($n\.$n\.$n)(\ \<($n\.$n\.$n))?$ ]]; then
+        deck_die "$(deck_manifest) ${field} is \"${range}\"; use \">=X.Y.Z\" or \">=X.Y.Z <A.B.C\""
+    fi
+    local floor="${BASH_REMATCH[1]}" upper="${BASH_REMATCH[6]}"
+    [[ -z "$upper" ]] && return 0
+    local -a f u
+    IFS=. read -ra f <<<"$floor"
+    IFS=. read -ra u <<<"$upper"
+    local i
+    for i in 0 1 2; do
+        (( 10#${u[i]} > 10#${f[i]} )) && return 0
+        (( 10#${u[i]} < 10#${f[i]} )) && break
+    done
+    deck_die "$(deck_manifest) ${field} is \"${range}\"; the upper bound ${upper} must be above the floor ${floor}"
+}
+
 # --- identity --------------------------------------------------------------
 
 deck_load() {
@@ -130,7 +158,12 @@ deck_load() {
     DECK_SLUG="${DECK_NAME##*/}"
     DECK_VERSION="$(deck_field package.version)"
     DECK_LICENSE="$(deck_field package.license)"
-    DECK_FLOOR="$(deck_field engines.jennifer)"
+    # The interpreter range, `>=X.Y.Z` or `>=X.Y.Z <A.B.C`: DECK_RANGE is all
+    # of it (what the pragma carries), DECK_FLOOR its `>=X.Y.Z` part.
+    DECK_RANGE="$(deck_field engines.jennifer)"
+    deck_check_range engines.jennifer "$DECK_RANGE"
+    DECK_FLOOR="${DECK_RANGE%% *}"
+    deck_check_range engines.jennifer-tiny "$(deck_field engines.jennifer-tiny)"
 
     # A deck claims the constrained binary by listing it in [engines].
     if [[ -n "$(deck_field engines.jennifer-tiny)" ]]; then
@@ -152,7 +185,7 @@ deck_load() {
     [[ -f "$DECK_ENTRY" ]] || deck_die "no entry module $DECK_ENTRY for $DECK_NAME"
 
     export DECK_MANIFEST DECK_NAME DECK_SCOPE DECK_SLUG DECK_VERSION \
-           DECK_LICENSE DECK_FLOOR DECK_TINY DECK_SHAPE DECK_ENTRY
+           DECK_LICENSE DECK_RANGE DECK_FLOOR DECK_TINY DECK_SHAPE DECK_ENTRY
 }
 
 # --- the interpreter image -------------------------------------------------
@@ -189,6 +222,9 @@ deck_image() {
     # Released series, or newer than anything released?
     if [[ "$(printf '%s\n%s\n' "$series" "$JENNIFER_NEWEST_RELEASE" | sort -V | tail -1)" == "$JENNIFER_NEWEST_RELEASE" ]]; then
         printf 'ghcr.io/jennifer-language/jennifer:%s\n' "$series"
+    elif [[ "${DECK_RANGE:-}" == *" "* ]]; then
+        # A dev build fails every upper bound, so nothing could load this deck.
+        deck_die "engines.jennifer \"${DECK_RANGE}\" has an upper bound but its floor is not released; no interpreter build satisfies it"
     else
         printf 'ghcr.io/jennifer-language/jennifer:dev\n'
     fi

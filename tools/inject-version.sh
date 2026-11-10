@@ -54,7 +54,7 @@ copyright="$(grep -m1 '^# SPDX-FileCopyrightText: ' "$target" || true)"
 cat > "$target" <<EOF
 # SPDX-License-Identifier: ${DECK_LICENSE}
 ${copyright}
-# pragma-jennifer-version: ${DECK_FLOOR}
+# pragma-jennifer-version: ${DECK_RANGE}
 # ci-no-overlay
 
 # ${DECK_SLUG} - ${marker}. Do not edit.

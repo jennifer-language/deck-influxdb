@@ -67,7 +67,7 @@ when you are iterating on one thing:
 jennifer test src/<module>_test.j      # one suite (there is no finer filter)
 jennifer fmt -l <files>                # exits 1 if anything is unformatted
 jennifer lint <files>                  # exits 1 on a warning
-tools/check-headers.sh                 # SPDX pair + floor match the manifest
+tools/check-headers.sh                 # SPDX pair + range match the manifest
 tools/check-overlays.sh                # every module has a _test.j, and back
 tools/check-src.sh                     # src/ holds only .j files
 tools/check-coverage.sh                # every export is called from a test
@@ -86,7 +86,9 @@ tools/check-examples.sh                # every example still works
   # pragma-jennifer-version: <engines.jennifer>
   ```
 
-  The licence and floor are stated twice on purpose; change both or neither.
+  The licence and range are stated twice on purpose; change both or neither.
+  The range is `>=X.Y.Z`, or `>=X.Y.Z <A.B.C` with an exclusive upper bound
+  above the floor; the pragma must repeat it exactly.
 - **Every module in `src/` (or `src/topics/`) has a co-located
   `<module>_test.j`.** jvc will not publish without it. Only generated data
   files may opt out, with a `# ci-no-overlay` header line or an entry in
@@ -140,7 +142,7 @@ tools/check-examples.sh                # every example still works
 - **Do not add a dependency** (`[decks]`) or a capability (`net`, `exec`,
   `sql`, ...) without asking. A capability needs a comment in the manifest
   saying why.
-- **Do not change the interpreter floor** (`engines.jennifer`) without asking:
+- **Do not change the interpreter range** (`engines.jennifer`) without asking:
   it decides which interpreter CI tests on and which consumers can use the
   deck.
 - **Never commit build output**: `site/`, `dist/`, `vendor/`, fixtures.
@@ -153,3 +155,22 @@ The version lives in the manifest. A release is cut by pushing a tag that
 matches it, plain `0.2.0` with no `v` prefix; `release.yml` refuses a tag
 that disagrees. So the order is: bump the manifest, commit, then tag - and the
 tag is the maintainer's call, not the agent's.
+
+### A breaking interpreter release
+
+When a new interpreter (say 0.26.0) breaks this deck, it takes two releases:
+
+1. **A capped patch release from the last tag.** Branch from the deck's last
+   tag (say `0.3.1`), change only `engines.jennifer` and every source pragma to
+   `>=0.25.0 <0.26.0`, bump to `0.3.2`, and tag it. Release it before or with
+   the new interpreter.
+2. **A minor release from main** with `>=0.26.0` and the deck's fixes for the
+   new interpreter (`0.4.0`), after the interpreter is tagged.
+
+Published releases are immutable, so `0.3.1` keeps claiming to run on 0.26.
+jvc installs the newest deck version whose `engines.jennifer` admits the local
+interpreter: on 0.25 that is now `0.3.2`, which keeps those users working, and
+on 0.26 it is `0.4.0`. A `0.3.2` still vendored after an interpreter upgrade
+fails at load with a clear version error instead of deep inside a call.
+Development builds (`-dev`) count as newer than any release: they pass every
+floor and fail every upper bound.
