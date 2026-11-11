@@ -39,7 +39,7 @@ influxdb.write($c, [$p]);
 
 ## Requirements
 
-Jennifer 0.25.0 or newer, the default `jennifer` binary (`net`), not
+Jennifer 0.26.0 or newer, the default `jennifer` binary (`net`), not
 `jennifer-tiny`.
 
 ## Development

@@ -16,4 +16,4 @@ manual = "https://jennifer-language.github.io/deck-influxdb/"
 
 # Only the default binary: `jennifer-tiny` has no `net` capability.
 [engines]
-jennifer = ">=0.25.0"
+jennifer = ">=0.26.0"
