@@ -1,6 +1,6 @@
 # tools/shared.lock - written by the template's tools/sync-deck.sh. Do not
 # edit: tools/check-shared.sh fails CI when a file below differs from it.
-# source: template 202d388-dirty, synced 2026-11-10
+# source: template c66e2bb-dirty, synced 2026-11-13
 f8d84374b771e75719ca751af895ff8e151ed1d106d652421290e5d38d0b22b2  .github/workflows/test.yml
 0c9c1a9fea4b6cb46c4373ddebd857df1528189b0e09324c7309bf2164324097  .github/workflows/release.yml
 286238a918176a80223c5c871be5e487f32516fdcba6c6aaaba66c3cf5e1f685  .github/workflows/docs.yml
@@ -14,7 +14,7 @@ c78bbab732a504f05f195e36deea4f8db05113f8ae1b0b4b717d184e02896f65  tools/check-al
 24d1ffafede332210718d6f6fe5870539c28163f95a37296b365adf741a290cf  tools/check-overlays.sh
 683de1c4898ba26287c9085bf21c256bdb2acdf0e5508032231f5d0e3ece257d  tools/check-src.sh
 356221c388f2125ef68b84a8d453988049cdf186d8d6836683a181cad432cbb7  tools/check-coverage.sh
-217a3d686a2dac26a704600d5ea8aa153d521551de1a5a900248b2ca3411d601  tools/check-docs.sh
+1773868b3f7f95f820aacc96aefdbfbfc84b5fff2fb6e1668a23e80fc32229d9  tools/check-docs.sh
 090ff0fb9b2f43889ba211f29b0df0fa29bce3f76342707020c630529434bc75  tools/check-identity.sh
 9a62551b9c8b76af66de93bcc004f977f19b49d87fce2b5ee1b0d06ef70f9d27  tools/check-examples-shared.sh
 84aa3a2f94090761ce94080b99a396d7fb24c76f3faceba2bac77ffb1662d9fe  tools/vendor-deps.sh

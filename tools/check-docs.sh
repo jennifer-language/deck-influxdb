@@ -190,6 +190,23 @@ for d in docs:
             note(d, f"{m.group(1)}.{m.group(2)} is documented but not exported")
 
 # ---- 3: cheatsheet signatures --------------------------------------------
+def cells_of(line):
+    """The cells of a GFM table row: split on pipes that are not escaped as
+    `\\|`, then unescape them (GFM honours `\\|` inside code spans too)."""
+    body = line.strip()[1:]
+    if re.search(r'(?<!\\)\|$', body):
+        body = body[:-1]
+    return [c.strip().replace('\\|', '|') for c in re.split(r'(?<!\\)\|', body)]
+
+def literal(v):
+    """The text of a Jennifer string literal: 'raw' as is, "cooked" with its
+    backslash escapes decoded; None when v is not a string literal."""
+    if len(v) >= 2 and v[0] == v[-1] == "'":
+        return v[1:-1]
+    if len(v) >= 2 and v[0] == v[-1] == '"':
+        return re.sub(r'\\(.)', lambda m: {'n': '\n', 't': '\t', 'r': '\r'}.get(m.group(1), m.group(1)), v[1:-1])
+    return None
+
 # A signature is the first cell of a table row, or a bullet. Only that cell is
 # read, because a notes column may show a call as an example, which is not a
 # declaration.
@@ -199,10 +216,10 @@ for line in sheet.split('\n'):
     if line.startswith('- '):
         cell = line
     elif line.startswith('|'):
-        parts = line.split('|')
-        if len(parts) < 2:
+        parts = cells_of(line)
+        if not parts:
             continue
-        cell = parts[1]
+        cell = parts[0]
     else:
         continue
     for m in re.finditer(r'`(?:([a-z][A-Za-z0-9]*)\.)?([a-z][A-Za-z0-9]*)\(([^`)]*)\)`', cell):
@@ -260,6 +277,9 @@ for (ns, name), variants in sorted(enums.items()):
                     f"enum {label(ns, name)} variant `{v}` is undocumented")
 
 def normalise(value):
+    lit = literal(value.strip().strip('`'))
+    if lit is not None:
+        return lit                # a bare table value equals the literal's text
     v = value.strip().strip('`').strip('"')
     if v.startswith('$'):
         return str(int(v[1:], 16))
@@ -276,7 +296,7 @@ for line in sheet.split('\n'):
     if not line.startswith('|'):
         header = None
         continue
-    cells = [c.strip() for c in line.strip().strip('|').split('|')]
+    cells = cells_of(line)
     if header is None:
         header = [c.lower() for c in cells]
         continue
