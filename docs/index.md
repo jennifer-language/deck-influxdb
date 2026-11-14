@@ -12,8 +12,11 @@ API generations: 1.x (`/write?db=...` + InfluxQL) and 2.x
 writes but has no Flux; query it with InfluxQL through a 1.x client. Built on
 the [`http`](https://jennifer-lang.dev/modules/http.html) module, so it needs
 the default `jennifer` binary. A failed request, refused, timed out or
-answered with an error, throws `Error{kind: "influxdb"}` with the client's
-credentials redacted.
+answered with an error, throws an `influxdb.InfluxdbError` (kind
+`"influxdb"`) with the client's credentials redacted. Its `status` is the HTTP
+status of the server's answer (0 when there was none) and `code` a 2.x error's
+code (`unauthorized`, `not found`, `invalid`, ...), so a caller branches on
+them instead of the message.
 
 ```jennifer
 import "@jennifer/influxdb/" as influxdb;
@@ -129,7 +132,8 @@ shortest form, booleans as `"true"` / `"false"`, and JSON `null` as `""` - so a
 homogeneous `list of list of string` can hold a row of otherwise mixed-type
 columns. Convert a cell you know is numeric with `convert.toFloat`. A
 per-statement or top-level `error` in the response throws
-`Error{kind: "influxdb"}`. The statement goes in the POST body (`q=...`), not
+an `InfluxdbError` with `status` 0 (the server answered 200 and reported the
+error in the result). The statement goes in the POST body (`q=...`), not
 the URL, so it stays out of proxy and access logs. A result the server cut at
 its row limit (`"partial": true`) comes back as far as it goes, without a
 flag: page with `LIMIT` / `OFFSET` for large results.

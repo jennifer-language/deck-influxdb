@@ -407,3 +407,39 @@ func testQueryParsing() {
     testing.assertEqual($r.series[0].tags["a~b"], "x");
     testing.assertThrows("topLevelError", "influxdb");
 }
+
+# A non-2xx answer is an InfluxdbError with the status and a 2.x error code,
+# the token redacted from the message; a local check has neither.
+func testANon2xxIsAnInfluxdbError() {
+    def c as Client init client("http://localhost:8086", "metrics");
+    def resp as http.Response init http.Response{
+        status: 401,
+        statusText: "Unauthorized",
+        headers: {},
+        body: '{"code":"unauthorized","message":"unauthorized access"}'
+    };
+    try {
+        failResponse($c, $resp);
+        throw Error{kind: "missed", message: "a 401"};
+    } catch (e) {
+        testing.assertEqual($e.kind, "influxdb");
+        testing.assertEqual($e.status, 401);
+        testing.assertEqual($e.code, "unauthorized");
+        testing.assertEqual($e.message, "influxdb: HTTP 401: unauthorized access");
+    }
+    $resp.status = 502;
+    $resp.body = "<html>bad gateway</html>";
+    try {
+        failResponse($c, $resp);
+        throw Error{kind: "missed", message: "a 502"};
+    } catch (e) {
+        testing.assertEqual($e.status, 502);
+        testing.assertEqual($e.code, "");
+    }
+    try {
+        fail("local");
+        throw Error{kind: "missed", message: "a local check"};
+    } catch (e) {
+        testing.assertEqual($e.status, 0);
+    }
+}

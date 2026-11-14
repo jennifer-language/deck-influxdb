@@ -77,6 +77,17 @@ A parsed query result.
 |---|---|
 | `series as list of Series` | the result series |
 
+### `InfluxdbError`
+
+Every error of kind `"influxdb"`.
+
+| Field | Meaning |
+|---|---|
+| `kind as string` | always `"influxdb"` |
+| `message as string` | `influxdb: ` and the server's error, the token redacted |
+| `status as int` | the HTTP status of the answer; 0 when there was none |
+| `code as string` | a 2.x error's `code` (`unauthorized`, `not found`, ...); "" when none |
+
 ### `Version`
 
 The API generation a `Client` targets.
